@@ -1,4 +1,4 @@
-package hackdaycache
+package gocachelib
 
 import (
 	"time"
