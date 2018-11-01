@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -31,7 +32,16 @@ func httpGet(url string) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	log.Println("GET", resp.StatusCode, url, time.Now().Sub(t), time.Now().Format("15:04:05.000"))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("Error fetching %v %s", resp.StatusCode, resp.Status)
+	}
+	// log only slow requests
+	if time.Now().Sub(t) > 600*time.Millisecond {
+		log.Println("GET", resp.StatusCode, url, time.Now().Sub(t), time.Now().Format("15:04:05.000"))
+	}
 	return body, nil
 }
 
