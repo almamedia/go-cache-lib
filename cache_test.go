@@ -10,6 +10,7 @@ import (
 )
 
 func TestSetItem(t *testing.T) {
+	Start(1, 11)
 	url := "https://httpbin.org/ip"
 	i := CacheItem{
 		Key:          url,
@@ -24,4 +25,6 @@ func TestSetItem(t *testing.T) {
 	cache.Remove(url)
 	assert.False(t, strings.Contains(string(GetItem(url)), "origin"))
 	assert.True(t, string(GetItem(url)) == "")
+	assert.Equal(t, 1, workerAmount)
+	assert.Equal(t, 11, bufferedJobs)
 }

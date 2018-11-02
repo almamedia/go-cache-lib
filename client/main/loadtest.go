@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -23,8 +22,8 @@ func main() {
 		item := hc.CacheItem{
 			Key:          u,
 			Value:        client.DataFetch(u),
-			Expire:       time.Now().Add(time.Duration(r1.Intn(35)+5) * time.Second),
-			UpdateLength: time.Duration(r1.Intn(35)+5) * time.Second,
+			Expire:       time.Now().Add(time.Duration(r1.Intn(20)+5) * time.Second),
+			UpdateLength: time.Duration(r1.Intn(20)+5) * time.Second,
 			GetFunc:      client.DataFetch,
 		}
 		hc.AddItem(item)
@@ -45,9 +44,6 @@ func main() {
 			}
 		})
 	}
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
 	go runURLs()
 	http.ListenAndServe(":8800", router)
 }
@@ -60,13 +56,13 @@ func runURLs() {
 
 func fetch(url, match string) {
 	t := time.Now()
-	const howMany = 5000
+	const howMany = 5
 	for i := 0; i < howMany; i++ {
 		item := client.DataFetch(url)
 		if item == nil || !strings.Contains(string(item), match) {
-			os.Exit(2)
+			log.Fatalln("ERROR page not found", string(item), item == nil, match)
 		}
-		time.Sleep(20 * time.Millisecond)
+		time.Sleep(300 * time.Millisecond)
 	}
 	log.Println("fetched", howMany, "times from cache successfully in", time.Now().Sub(t))
 }
@@ -81,6 +77,7 @@ var urls = []string{
 	"http://www.tivi.fi/",
 	"http://www.mikrobitti.fi/",
 	"http://www.tekniikkatalous.fi/",
+	"http://www.kauppalehti.fi/",
 	"http://www.marmai.fi/",
 	"http://www.dagensmedia.se/",
 	"http://www.affarsvarlden.se/",
