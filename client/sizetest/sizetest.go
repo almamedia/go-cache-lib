@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	hc.Start(1, 10, 5)
+	hc.Start(2, 10, 5)
 	for _, u := range urls {
 		item := hc.CacheItem{
 			Key:          u,

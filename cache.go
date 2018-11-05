@@ -33,14 +33,16 @@ func init() {
 	for w := 1; w <= workerAmount; w++ {
 		go worker(w, jobs)
 	}
-	go doEvery(time.Second, checkExpiredItems)
+	go doEvery(1*time.Second, checkExpiredItems)
 }
 
 // check and update near expiring items
 func checkExpiredItems() {
 	for _, value := range cache.Items() {
 		item := value.(CacheItem)
-		if time.Now().After(item.Expire.Add(-1 * time.Second)) {
+		if time.Now().After(item.Expire.Add(-300*time.Millisecond)) && !item.Updating {
+			item.Updating = true
+			cache.Set(item.Key, item)
 			jobs <- item
 		}
 	}
@@ -57,8 +59,12 @@ func worker(id int, jobs <-chan CacheItem) {
 				Expire:       time.Now().Add(item.UpdateLength),
 				UpdateLength: item.UpdateLength,
 				GetFunc:      item.GetFunc,
+				Updating:     false,
 			}
 			AddItem(d)
+		} else {
+			item.Updating = false
+			cache.Set(item.Key, item)
 		}
 	}
 }
@@ -74,7 +80,7 @@ func GetItem(key string) []byte {
 
 // AddItem sets the item to cache
 func AddItem(item CacheItem) {
-	if cache.Count() > cacheSize {
+	if cache.Count() >= cacheSize {
 		log.Println("CACHE SIZE:", cache.Count(), "max size:", cacheSize)
 		removingKey := cache.Keys()[0]
 		log.Println("Cache full, removing key", removingKey)
@@ -95,4 +101,5 @@ type CacheItem struct {
 	Expire       time.Time
 	UpdateLength time.Duration
 	GetFunc      func(key string) []byte
+	Updating     bool
 }
