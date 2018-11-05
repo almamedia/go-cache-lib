@@ -1,6 +1,7 @@
 package gocachelib
 
 import (
+	"log"
 	"time"
 
 	"github.com/streamrail/concurrent-map"
@@ -13,12 +14,16 @@ var workerAmount = 20
 
 // maximum amount of jobs buffered, default 200
 var bufferedJobs = 200
+
+// default cache size
+var cacheSize = 20
 var jobs chan CacheItem
 
 // Start for setting worker amount
-func Start(workers int, bufferSize int) {
+func Start(workers, bufferSize, cacheSizeAmount int) {
 	workerAmount = workers
 	bufferedJobs = bufferSize
+	cacheSize = cacheSizeAmount
 }
 
 func init() {
@@ -53,7 +58,7 @@ func worker(id int, jobs <-chan CacheItem) {
 				UpdateLength: item.UpdateLength,
 				GetFunc:      item.GetFunc,
 			}
-			cache.Set(item.Key, d)
+			AddItem(d)
 		}
 	}
 }
@@ -69,6 +74,12 @@ func GetItem(key string) []byte {
 
 // AddItem sets the item to cache
 func AddItem(item CacheItem) {
+	if cache.Count() > cacheSize {
+		log.Println("CACHE SIZE:", cache.Count(), "max size:", cacheSize)
+		removingKey := cache.Keys()[0]
+		log.Println("Cache full, removing key", removingKey)
+		cache.Remove(removingKey)
+	}
 	cache.Set(item.Key, item)
 }
 

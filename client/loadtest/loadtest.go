@@ -16,6 +16,7 @@ import (
 )
 
 func main() {
+	hc.Start(3, 10, 22)
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
 	for _, u := range urls {
@@ -82,7 +83,7 @@ var urls = []string{
 	"http://www.dagensmedia.se/",
 	"http://www.affarsvarlden.se/",
 	"http://www.nyteknik.se/",
-	"http://www.mtv.fi/",
+	"http://www.mtvuutiset.fi/",
 	"http://www.reuters.com/",
 	"http://www.cnbc.com/economy/",
 	"http://www.bbc.com/news/business/economy",
