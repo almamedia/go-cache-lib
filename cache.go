@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/streamrail/concurrent-map"
+	cmap "github.com/streamrail/concurrent-map"
 )
 
 var cache cmap.ConcurrentMap
@@ -17,30 +17,41 @@ var bufferedJobs = 200
 
 // default cache size
 var cacheSize = 20
+
+// default ttl
+var ttl = 1 * time.Hour
+
 var jobs chan CacheItem
 
-// Start for setting worker amount
-func Start(workers, bufferSize, cacheSizeAmount int) {
+// Start background loading cache with specified parameters
+func StartWith(workers, bufferSize, cacheSizeAmount int, defaultTTL time.Duration) {
 	workerAmount = workers
 	bufferedJobs = bufferSize
 	cacheSize = cacheSizeAmount
+	ttl = defaultTTL
+	Start()
 }
 
-func init() {
+// Start background loading cache with default parameters
+func Start() {
 	cache = cmap.New()
 	jobs = make(chan CacheItem, bufferedJobs)
 	// workers
 	for w := 1; w <= workerAmount; w++ {
 		go worker(w, jobs)
 	}
-	go doEvery(1*time.Second, checkExpiredItems)
+	go doEvery(1*time.Second, refreshAndRevoke)
 }
 
-// check and update near expiring items
-func checkExpiredItems() {
+// check and update expiring items, revoke those exceeding their TTL
+func refreshAndRevoke() {
+	now := time.Now()
 	for _, value := range cache.Items() {
 		item := value.(CacheItem)
-		if time.Now().After(item.Expire.Add(-300*time.Millisecond)) && !item.Updating {
+		if now.After(item.RevokeTime) && !item.Updating {
+			log.Printf("Revoking item that has not been used in %v: %v", item.TTL, item.Key)
+			cache.Remove(item.Key)
+		} else if now.After(item.ExpireTime.Add(-300*time.Millisecond)) && !item.Updating {
 			item.Updating = true
 			cache.Set(item.Key, item)
 			jobs <- item
@@ -54,12 +65,14 @@ func worker(id int, jobs <-chan CacheItem) {
 		value := item.GetFunc(item.Key)
 		if value != nil {
 			d := CacheItem{
-				Key:          item.Key,
-				Value:        value,
-				Expire:       time.Now().Add(item.UpdateLength),
-				UpdateLength: item.UpdateLength,
-				GetFunc:      item.GetFunc,
-				Updating:     false,
+				Key:        item.Key,
+				Value:      value,
+				TTL: 		item.TTL,
+				RevokeTime: item.RevokeTime,
+				ExpireTime: time.Now().Add(item.Expiration),
+				Expiration: item.Expiration,
+				GetFunc:    item.GetFunc,
+				Updating:   false,
 			}
 			AddItem(d)
 		} else {
@@ -73,6 +86,9 @@ func worker(id int, jobs <-chan CacheItem) {
 func GetItem(key string) []byte {
 	value, ok := cache.Get(key)
 	if ok {
+		item := value.(CacheItem)
+		item.updateRevokeTime()
+		cache.Set(item.Key, item)
 		return value.(CacheItem).Value
 	}
 	return nil
@@ -80,6 +96,7 @@ func GetItem(key string) []byte {
 
 // AddItem sets the item to cache
 func AddItem(item CacheItem) {
+	item.updateRevokeTime()
 	if cache.Count() >= cacheSize {
 		log.Println("CACHE SIZE:", cache.Count(), "max size:", cacheSize)
 		removingKey := cache.Keys()[0]
@@ -96,10 +113,22 @@ func AddItem(item CacheItem) {
 // UpdateLength duration for next expiration
 // Get function for updating the value
 type CacheItem struct {
-	Key          string
-	Value        []byte
-	Expire       time.Time
-	UpdateLength time.Duration
-	GetFunc      func(key string) []byte
-	Updating     bool
+	Key        string
+	Value      []byte
+	ExpireTime time.Time
+	Expiration time.Duration
+	TTL        time.Duration
+	RevokeTime time.Time
+	GetFunc    func(key string) []byte
+	Updating   bool
+}
+
+func (i *CacheItem) updateRevokeTime() {
+	now := time.Now()
+
+	if i.TTL != 0 {
+		i.RevokeTime = now.Add(max(i.TTL, i.Expiration))
+	} else {
+		i.RevokeTime = now.Add(max(ttl, i.Expiration))
+	}
 }
