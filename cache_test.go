@@ -1,12 +1,9 @@
 package gocachelib
 
 import (
-	"log"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/almamedia/go-cache-lib/client"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -87,25 +84,55 @@ func TestExpire(t *testing.T) {
 	assert.NotEqual(t, string(value), string(GetItem(url)), "Item should have new value in cache")
 }
 
-
-func TestSetItem(t *testing.T) {
+func TestFullCacheReleasesEarliesRevoketimeFirst(t *testing.T) {
 	StartWith(1, 11, 1, 2*time.Second)
 	url := "https://httpbin.org/ip"
+	value := randomGetFunc("")
 	i := CacheItem{
 		Key:        url,
-		Value:      nil,
+		Value:      value,
 		ExpireTime: time.Now(),
 		Expiration: 1 * time.Second,
-		GetFunc:    client.DataFetch,
+		GetFunc:    randomGetFunc,
 	}
 	AddItem(i)
 	time.Sleep(2 * time.Second)
-	assert.True(t, strings.Contains(string(GetItem(url)), "origin"))
-	cache.Remove(url)
-	assert.False(t, strings.Contains(string(GetItem(url)), "origin"))
-	assert.True(t, string(GetItem(url)) == "")
-	assert.Equal(t, 1, workerAmount)
-	assert.Equal(t, 11, bufferedJobs)
+	assert.NotEqual(t, string(value), string(GetItem(url)), "Item should have new value in cache")
+} 
+
+func TestItemWithShortestTTLIsRevokedWhenCacheFillsUp(t *testing.T) {
+	StartWith(1, 11, 2, 1*time.Second)
+	AddItem(CacheItem{
+		Key: 		"1",
+		Value:      []byte("1"),
+		ExpireTime: time.Now(),
+		Expiration: 1 * time.Second,
+		TTL: 		2 * time.Second,
+		GetFunc:    noopGetFunc,
+	})
+	AddItem(CacheItem{
+		Key: 		"2",
+		Value:      []byte("2"),
+		ExpireTime: time.Now(),
+		Expiration: 1 * time.Second,
+		TTL: 		1 * time.Second,
+		GetFunc:    noopGetFunc,
+	})
+	AddItem(CacheItem{
+		Key: 		"3",
+		Value:      []byte("3"),
+		ExpireTime: time.Now(),
+		Expiration: 1 * time.Second,
+		TTL: 		2 * time.Second,
+		GetFunc:    noopGetFunc,
+	})
+
+	assert.Equal(t, 2, cache.Count(), "Cache should have 2 items")
+	assert.Equal(t, "1", string(GetItem("1")))
+	assert.Equal(t, "3", string(GetItem("3")))
+	for k, _ := range cache.Items() {
+		assert.NotEqual(t, "2", k, "Item #2 should have been revoked when cache was full")	
+	}
 }
 
 func noopGetFunc(s string) []byte {

@@ -98,10 +98,8 @@ func GetItem(key string) []byte {
 func AddItem(item CacheItem) {
 	item.updateRevokeTime()
 	if cache.Count() >= cacheSize {
-		log.Println("CACHE SIZE:", cache.Count(), "max size:", cacheSize)
-		removingKey := cache.Keys()[0]
-		log.Println("Cache full, removing key", removingKey)
-		cache.Remove(removingKey)
+		log.Print("Cache full")
+		releaseLeastViable()
 	}
 	cache.Set(item.Key, item)
 }
@@ -131,4 +129,15 @@ func (i *CacheItem) updateRevokeTime() {
 	} else {
 		i.RevokeTime = now.Add(max(ttl, i.Expiration))
 	}
+}
+
+func releaseLeastViable() {
+	var earliest CacheItem
+	for _, v := range cache.Items() {
+		if (v.(CacheItem).RevokeTime.Before(earliest.RevokeTime) || earliest.RevokeTime == time.Time{}) {
+			earliest = v.(CacheItem)
+		}
+	}
+	log.Printf("Removing cache item %s with earliest revoke time to make room", earliest.Key)
+	cache.Remove(earliest.Key)
 }
