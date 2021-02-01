@@ -1,0 +1,15 @@
+# github.com/davecgh/go-spew v1.1.1
+## explicit
+github.com/davecgh/go-spew/spew
+# github.com/julienschmidt/httprouter v1.2.0
+## explicit
+github.com/julienschmidt/httprouter
+# github.com/pmezard/go-difflib v1.0.0
+## explicit
+github.com/pmezard/go-difflib/difflib
+# github.com/streamrail/concurrent-map v0.0.0-20160823150647-8bf1e9bacbf6
+## explicit
+github.com/streamrail/concurrent-map
+# github.com/stretchr/testify v1.2.2
+## explicit
+github.com/stretchr/testify/assert

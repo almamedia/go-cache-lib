@@ -1,5 +1,7 @@
 module github.com/almamedia/go-cache-lib
 
+go 1.15
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/julienschmidt/httprouter v1.2.0
