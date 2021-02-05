@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestExpiration(t *testing.T) {
+func TestRevoke(t *testing.T) {
 	StartWith(1, 1, 1, 1*time.Second)
 	key := "xyzzy"
 	i := CacheItem{
@@ -39,6 +39,7 @@ func TestTTLLessThanExpiration(t *testing.T) {
 	time.Sleep(1500 * time.Millisecond)
 	assert.True(t, string(GetItem(key)) == "foo", "Item should still be in cache")
 }
+
 func TestGetItemPostponesRevoke(t *testing.T) {
 	StartWith(1, 1, 1, 1*time.Second)
 	key := "xyzzy"
@@ -83,22 +84,6 @@ func TestExpire(t *testing.T) {
 	time.Sleep(2 * time.Second)
 	assert.NotEqual(t, string(value), string(GetItem(url)), "Item should have new value in cache")
 }
-
-func TestFullCacheReleasesEarliesRevoketimeFirst(t *testing.T) {
-	StartWith(1, 11, 1, 2*time.Second)
-	url := "https://httpbin.org/ip"
-	value := randomGetFunc("")
-	i := CacheItem{
-		Key:        url,
-		Value:      value,
-		ExpireTime: time.Now(),
-		Expiration: 1 * time.Second,
-		GetFunc:    randomGetFunc,
-	}
-	AddItem(i)
-	time.Sleep(2 * time.Second)
-	assert.NotEqual(t, string(value), string(GetItem(url)), "Item should have new value in cache")
-} 
 
 func TestItemWithShortestTTLIsRevokedWhenCacheFillsUp(t *testing.T) {
 	StartWith(1, 11, 2, 1*time.Second)

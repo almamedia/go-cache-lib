@@ -99,7 +99,7 @@ func AddItem(item CacheItem) {
 	item.updateRevokeTime()
 	if cache.Count() >= cacheSize {
 		log.Print("Cache full")
-		releaseLeastViable()
+		revokeLeastViable()
 	}
 	cache.Set(item.Key, item)
 }
@@ -131,7 +131,7 @@ func (i *CacheItem) updateRevokeTime() {
 	}
 }
 
-func releaseLeastViable() {
+func revokeLeastViable() {
 	var earliest CacheItem
 	for _, v := range cache.Items() {
 		if (v.(CacheItem).RevokeTime.Before(earliest.RevokeTime) || earliest.RevokeTime == time.Time{}) {
