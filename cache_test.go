@@ -84,24 +84,24 @@ func TestExpire(t *testing.T) {
 func TestItemWithShortestTTLIsRevokedWhenCacheFillsUp(t *testing.T) {
 	StartWith(1, 11, 2, 1*time.Second)
 	AddItem(CacheItem{
-		Key: 		"1",
+		Key:        "1",
 		Value:      []byte("1"),
 		Expiration: 1 * time.Second,
-		TTL: 		2 * time.Second,
+		TTL:        2 * time.Second,
 		GetFunc:    noopGetFunc,
 	})
 	AddItem(CacheItem{
-		Key: 		"2",
+		Key:        "2",
 		Value:      []byte("2"),
 		Expiration: 1 * time.Second,
-		TTL: 		1 * time.Second,
+		TTL:        1 * time.Second,
 		GetFunc:    noopGetFunc,
 	})
 	AddItem(CacheItem{
-		Key: 		"3",
+		Key:        "3",
 		Value:      []byte("3"),
 		Expiration: 1 * time.Second,
-		TTL: 		2 * time.Second,
+		TTL:        2 * time.Second,
 		GetFunc:    noopGetFunc,
 	})
 
@@ -109,7 +109,7 @@ func TestItemWithShortestTTLIsRevokedWhenCacheFillsUp(t *testing.T) {
 	assert.Equal(t, "1", string(GetValue("1")))
 	assert.Equal(t, "3", string(GetValue("3")))
 	for k, _ := range cache.Items() {
-		assert.NotEqual(t, "2", k, "Item #2 should have been revoked when cache was full")	
+		assert.NotEqual(t, "2", k, "Item #2 should have been revoked when cache was full")
 	}
 }
 

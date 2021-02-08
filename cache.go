@@ -23,7 +23,7 @@ var ttl = 1 * time.Hour
 
 var jobs chan timedCacheItem
 
-// Start background loading cache with specified parameters
+// StartWith background loading cache with specified parameters
 func StartWith(workers, bufferSize, cacheSizeAmount int, defaultTTL time.Duration) {
 	workerAmount = workers
 	bufferedJobs = bufferSize
@@ -124,7 +124,7 @@ type timedCacheItem struct {
 	CacheItem
 	RevokeTime time.Time
 	ExpireTime time.Time
-	Updating bool
+	Updating   bool
 }
 
 func (i *timedCacheItem) UpdateRevokeTime() {
