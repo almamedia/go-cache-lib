@@ -120,6 +120,7 @@ func TestConcurrentRefreshAndGetValueBug(t *testing.T) {
 		loopInterval = defaultLoopInterval
 	}()
 	loopInterval = 10 * time.Millisecond
+	// Make sure revoke does not interfere here
 	StartWith(1, 11, 1, 5*time.Second)
 	// continuously spamming GetValue should manifest the bug
 	c := make(chan []byte, 1)
@@ -148,7 +149,7 @@ func TestConcurrentRevokeAndGetValueBug(t *testing.T) {
 	}()
 	loopInterval = 10 * time.Millisecond
 	StartWith(1, 11, 1, 20*time.Millisecond)
-	// Continuously spamming GetValue should force ConcurrentRefreshAndGetBug to manifest
+	// Continuously spamming GetValue should force ConcurrentRefreshAndGetBug to manifest if it is present
 	c := make(chan []byte, 1)
 	url := "https://httpbin.org/ip"
 	go busyGet(t, c, url)

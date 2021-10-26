@@ -91,6 +91,7 @@ func GetValue(key string) []byte {
 	if ok {
 		item := value.(timedCacheItem)
 		item.UpdateRevokeTime()
+		item.Updating = false
 		cache.Set(item.Key, item)
 		return value.(timedCacheItem).Value
 	}
