@@ -65,7 +65,7 @@ func revoke() {
 	now := time.Now()
 	for _, value := range cache.Items() {
 		item := value.(timedCacheItem)
-		if now.After(item.RevokeTime) && !item.Updating {
+		if now.After(item.RevokeTime) {
 			log.Printf("Revoking item that has not been used in %v: %v", item.TTL, item.Key)
 			cache.Remove(item.Key)
 		}
