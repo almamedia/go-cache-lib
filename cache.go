@@ -21,6 +21,9 @@ var cacheSize = 20
 // default ttl
 var ttl = 1 * time.Hour
 
+// revoke & refresh loop interval
+var loopInterval = 1 * time.Second
+
 var jobs chan timedCacheItem
 
 // StartWith background loading cache with specified parameters
@@ -40,8 +43,8 @@ func Start() {
 	for w := 1; w <= workerAmount; w++ {
 		go worker(w, jobs)
 	}
-	go doEvery(1*time.Second, refresh)
-	go doEvery(1*time.Second, revoke)
+	go doEvery(loopInterval, refresh)
+	go doEvery(loopInterval, revoke)
 }
 
 // check and update expiring items

@@ -113,10 +113,71 @@ func TestItemWithShortestTTLIsRevokedWhenCacheFillsUp(t *testing.T) {
 	}
 }
 
+func TestConcurrentRefreshAndGetBug(t *testing.T) {
+	// Run refresh & revoke loops quicker than usual
+	defaultLoopInterval := loopInterval
+	defer func() {
+		loopInterval = defaultLoopInterval
+	}()
+	loopInterval = 10 * time.Millisecond
+	StartWith(1, 11, 1, 5*time.Second)
+	// continuously spam GetValue until we want to stop
+	c := make(chan []byte, 1)
+	url := "https://httpbin.org/ip"
+	go busyGet(t, c, url)
+	value := randomGetFunc("")
+	i := CacheItem{
+		Key:        url,
+		Value:      value,
+		Expiration: 10 * time.Millisecond,
+		GetFunc:    randomGetFunc,
+	}
+	AddItem(i)
+	time.Sleep(1 * time.Second)
+	c <- []byte("stop")
+	v, _ := cache.Get(url)
+	ci := v.(timedCacheItem)
+	assert.NotEqual(t, ci.Updating, true, "Item Should not be in updating state")
+}
+
+func TestRevocationDespiteUpdatingBug(t *testing.T) {
+	// Run refresh & revoke loops quicker than usual
+	defaultLoopInterval := loopInterval
+	defer func() {
+		loopInterval = defaultLoopInterval
+	}()
+	loopInterval = 10 * time.Millisecond
+	StartWith(1, 11, 1, 20*time.Millisecond)
+	// continuously spam GetValue until we want to stop
+	c := make(chan []byte, 1)
+	url := "https://httpbin.org/ip"
+	go busyGet(t, c, url)
+	value := randomGetFunc("")
+	i := CacheItem{
+		Key:        url,
+		Value:      value,
+		Expiration: 10 * time.Millisecond,
+		GetFunc:    randomGetFunc,
+	}
+	AddItem(i)
+	time.Sleep(1 * time.Second)
+	c <- []byte("stop")
+	assert.True(t, nil == GetValue(url), "Item should have been revoked by now")
+}
+
 func noopGetFunc(s string) []byte {
 	return nil
 }
 
 func randomGetFunc(s string) []byte {
 	return []byte(uuid.New().String())
+}
+
+func busyGet(t *testing.T, c chan []byte, k string) {
+	defer func() {
+		_ = <-c
+	}()
+	for len(c) == 0 {
+		_ = GetValue(k)
+	}
 }
