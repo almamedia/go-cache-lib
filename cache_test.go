@@ -113,7 +113,7 @@ func TestItemWithShortestTTLIsRevokedWhenCacheFillsUp(t *testing.T) {
 	}
 }
 
-func TestConcurrentRefreshAndGetBug(t *testing.T) {
+func TestConcurrentRefreshAndGetValueBug(t *testing.T) {
 	// Run refresh & revoke loops quicker than usual
 	defaultLoopInterval := loopInterval
 	defer func() {
@@ -121,7 +121,7 @@ func TestConcurrentRefreshAndGetBug(t *testing.T) {
 	}()
 	loopInterval = 10 * time.Millisecond
 	StartWith(1, 11, 1, 5*time.Second)
-	// continuously spam GetValue until we want to stop
+	// continuously spamming GetValue should manifest the bug
 	c := make(chan []byte, 1)
 	url := "https://httpbin.org/ip"
 	go busyGet(t, c, url)
@@ -140,7 +140,7 @@ func TestConcurrentRefreshAndGetBug(t *testing.T) {
 	assert.NotEqual(t, ci.Updating, true, "Item Should not be in updating state")
 }
 
-func TestRevocationDespiteUpdatingBug(t *testing.T) {
+func TestConcurrentRevokeAndGetValueBug(t *testing.T) {
 	// Run refresh & revoke loops quicker than usual
 	defaultLoopInterval := loopInterval
 	defer func() {
@@ -148,7 +148,7 @@ func TestRevocationDespiteUpdatingBug(t *testing.T) {
 	}()
 	loopInterval = 10 * time.Millisecond
 	StartWith(1, 11, 1, 20*time.Millisecond)
-	// continuously spam GetValue until we want to stop
+	// Continuously spamming GetValue should force ConcurrentRefreshAndGetBug to manifest
 	c := make(chan []byte, 1)
 	url := "https://httpbin.org/ip"
 	go busyGet(t, c, url)
@@ -162,6 +162,7 @@ func TestRevocationDespiteUpdatingBug(t *testing.T) {
 	AddItem(i)
 	time.Sleep(1 * time.Second)
 	c <- []byte("stop")
+	time.Sleep(1 * time.Second)
 	assert.True(t, nil == GetValue(url), "Item should have been revoked by now")
 }
 
