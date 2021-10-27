@@ -56,7 +56,7 @@ func Start() {
 	revokeTicker = doEvery(loopInterval, revoke)
 }
 
-// Stop background tickers
+// Stop background tickers, close job channel, wait for workers to finish and empty cache
 func Stop() {
 	log.Printf("Stop in-memory cache background processing")
 	refreshTicker.Stop()
