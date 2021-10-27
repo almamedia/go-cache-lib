@@ -12,7 +12,7 @@ func TestRevoke(t *testing.T) {
 	// Run refresh & revoke loops quicker than usual
 	defaultLoopInterval := loopInterval
 	defer func() {
-		Stop()
+		stop()
 		loopInterval = defaultLoopInterval
 	}()
 	loopInterval = 10 * time.Millisecond
@@ -34,7 +34,7 @@ func TestTTLLessThanExpiration(t *testing.T) {
 	// Run refresh & revoke loops quicker than usual
 	defaultLoopInterval := loopInterval
 	defer func() {
-		Stop()
+		stop()
 		loopInterval = defaultLoopInterval
 	}()
 	loopInterval = 10 * time.Millisecond
@@ -54,7 +54,7 @@ func TestTTLLessThanExpiration(t *testing.T) {
 
 func TestGetValuePostponesRevoke(t *testing.T) {
 	StartWith(1, 1, 1, 1*time.Second)
-	defer Stop()
+	defer stop()
 	key := "TestGetValuePostponesRevoke"
 	i := CacheItem{
 		Key:        key,
@@ -85,7 +85,7 @@ func TestExpire(t *testing.T) {
 	// Run refresh & revoke loops quicker than usual
 	defaultLoopInterval := loopInterval
 	defer func() {
-		Stop()
+		stop()
 		loopInterval = defaultLoopInterval
 	}()
 	loopInterval = 10 * time.Millisecond
@@ -105,7 +105,7 @@ func TestExpire(t *testing.T) {
 
 func TestItemWithShortestTTLIsRevokedWhenCacheFillsUp(t *testing.T) {
 	StartWith(1, 11, 2, 1*time.Second)
-	defer Stop()
+	defer stop()
 	AddItem(CacheItem{
 		Key:        "TestItemWithShortestTTLIsRevokedWhenCacheFillsUp1",
 		Value:      []byte("TestItemWithShortestTTLIsRevokedWhenCacheFillsUp1"),
@@ -139,7 +139,7 @@ func TestConcurrentRefreshAndGetValueBug(t *testing.T) {
 	// Run refresh & revoke loops quicker than usual
 	defaultLoopInterval := loopInterval
 	defer func() {
-		Stop()
+		stop()
 		loopInterval = defaultLoopInterval
 	}()
 	loopInterval = 10 * time.Millisecond
@@ -169,7 +169,7 @@ func TestConcurrentRevokeAndGetValueBug(t *testing.T) {
 	// Run refresh & revoke loops quicker than usual
 	defaultLoopInterval := loopInterval
 	defer func() {
-		Stop()
+		stop()
 		loopInterval = defaultLoopInterval
 	}()
 	loopInterval = 10 * time.Millisecond

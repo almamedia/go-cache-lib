@@ -57,7 +57,7 @@ func Start() {
 }
 
 // Stop background tickers, close job channel, wait for workers to finish and empty cache
-func Stop() {
+func stop() {
 	log.Printf("Stop in-memory cache background processing")
 	refreshTicker.Stop()
 	revokeTicker.Stop()
