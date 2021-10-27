@@ -2,6 +2,7 @@ package gocachelib
 
 import (
 	"log"
+	"sync"
 	"time"
 
 	cmap "github.com/streamrail/concurrent-map"
@@ -21,7 +22,17 @@ var cacheSize = 20
 // default ttl
 var ttl = 1 * time.Hour
 
+// revoke & refresh loop interval
+var loopInterval = 1 * time.Second
+
 var jobs chan timedCacheItem
+
+var refreshTicker *time.Ticker
+var revokeTicker *time.Ticker
+
+var loopMutex = sync.Mutex{}
+
+var workerWg = sync.WaitGroup{}
 
 // StartWith background loading cache with specified parameters
 func StartWith(workers, bufferSize, cacheSizeAmount int, defaultTTL time.Duration) {
@@ -34,18 +45,33 @@ func StartWith(workers, bufferSize, cacheSizeAmount int, defaultTTL time.Duratio
 
 // Start background loading cache with default parameters
 func Start() {
+	log.Printf("Starting in-memory cache with %d workers, %d job queue size, %d cache maximum and %d default TTL", workerAmount, bufferedJobs, cacheSize, ttl)
 	cache = cmap.New()
 	jobs = make(chan timedCacheItem, bufferedJobs)
 	// workers
 	for w := 1; w <= workerAmount; w++ {
 		go worker(w, jobs)
 	}
-	go doEvery(1*time.Second, refresh)
-	go doEvery(1*time.Second, revoke)
+	refreshTicker = doEvery(loopInterval, refresh)
+	revokeTicker = doEvery(loopInterval, revoke)
+}
+
+// Stop background tickers, close job channel, wait for workers to finish and empty cache
+func stop() {
+	log.Printf("Stop in-memory cache background processing")
+	refreshTicker.Stop()
+	revokeTicker.Stop()
+	loopMutex.Lock()
+	defer loopMutex.Unlock()
+	close(jobs)
+	workerWg.Wait()
+	cache = cmap.New()
 }
 
 // check and update expiring items
 func refresh() {
+	loopMutex.Lock()
+	defer loopMutex.Unlock()
 	now := time.Now()
 	for _, value := range cache.Items() {
 		item := value.(timedCacheItem)
@@ -59,10 +85,12 @@ func refresh() {
 
 // revoke those exceeding their TTL
 func revoke() {
+	loopMutex.Lock()
+	defer loopMutex.Unlock()
 	now := time.Now()
 	for _, value := range cache.Items() {
 		item := value.(timedCacheItem)
-		if now.After(item.RevokeTime) && !item.Updating {
+		if now.After(item.RevokeTime) {
 			log.Printf("Revoking item that has not been used in %v: %v", item.TTL, item.Key)
 			cache.Remove(item.Key)
 		}
@@ -71,6 +99,8 @@ func revoke() {
 
 // listen to jobs channel and handle incoming items
 func worker(id int, jobs <-chan timedCacheItem) {
+	workerWg.Add(1)
+	defer workerWg.Done()
 	for item := range jobs {
 		value := item.GetFunc(item.Key)
 		if value != nil {
@@ -88,6 +118,7 @@ func GetValue(key string) []byte {
 	if ok {
 		item := value.(timedCacheItem)
 		item.UpdateRevokeTime()
+		item.Updating = false
 		cache.Set(item.Key, item)
 		return value.(timedCacheItem).Value
 	}
@@ -141,6 +172,8 @@ func (i *timedCacheItem) UpdateExpireTime() {
 }
 
 func revokeLeastViable() {
+	loopMutex.Lock()
+	defer loopMutex.Unlock()
 	var earliest timedCacheItem
 	for _, v := range cache.Items() {
 		if (v.(timedCacheItem).RevokeTime.Before(earliest.RevokeTime) || earliest.RevokeTime == time.Time{}) {
